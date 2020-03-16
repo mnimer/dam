@@ -11,6 +11,9 @@ steps:
     args: ['config', 'set', 'run/region', 'us-central1']
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['config', 'set', 'run/platform', 'managed']
+  # Build the module.
+  - name: golang
+    args: ['go', 'test', '.']
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['builds', 'submit', '--tag', 'gcr.io/${PROJECT_ID}/services-images-exifparser']
   - name: 'gcr.io/cloud-builders/gcloud'
