@@ -1,0 +1,15 @@
+- getCurrentTime:
+    Type: HTTP
+    Params:
+        URL: http://worldclockapi.com/api/json/utc/now
+    Output: CurrentTime
+- readWikipedia:
+    Type: HTTP
+    Params:
+        URL: https://en.wikipedia.org/w/api.php
+        Query:
+            action: opensearch
+            search: ${CurrentTime.dayOfTheWeek}
+    Output: WikiResult
+- thatsAll:
+    Return: ${WikiResult[1]}

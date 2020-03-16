@@ -1,0 +1,3 @@
+- init_workflow:
+    Assign:
+      - index_image_exif: true

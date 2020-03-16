@@ -1,0 +1,31 @@
+- init_workflow:
+    Assign:
+      - image_exif: true
+      - image_thumbnail: false
+- gcp_getfile:
+    Type: HTTP
+    Params:
+      URL: https://services-core-gcsfileinfo-5txyoqdyga-uc.a.run.app
+      Method: GET
+      Query:
+        name: ${Args.name}
+        bucket: ${Args.bucket}
+    Output: attrs
+    Switch:
+        - Condition: ${attrs.ContentType == "image/jpeg" AND Args.image_exif}
+          Next: image_ExifParser
+
+
+- image_ExifParser:
+    Type: HTTP
+    Params:
+      URL: https://services-images-exifparser-5txyoqdyga-uc.a.run.app
+      Method: POST
+    Output: exifResult
+    Next: core_MetadataFileWriter
+- core_MetadataFileWriter:
+    Type: HTTP
+    Params:
+      URL: https://services-core-metaddatafilewriter-5txyoqdyga-uc.a.run.app
+      Method: POST
+- exit:

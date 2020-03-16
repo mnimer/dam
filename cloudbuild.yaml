@@ -7,11 +7,25 @@
 # $SHORT_SHA: first 7 characters of $REVISION_ID or $COMMIT_SHA.
 
 steps:
-#  - name: 'gcr.io/cloud-builders/gcloud'
-#    args: ['pubsub', 'topics', 'create', 'services']
+#### Core
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/core/GcsFileInfo'
+    waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/core/MetaDataFileWriter'
+    waitFor: ['-']
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
     dir: 'services/core/PubSubHandler'
+    waitFor: ['-']
+#### Images
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/images/ExifParser'
+    waitFor: ['-']
+
 
 #options:
 #  env: [string, string, ...]

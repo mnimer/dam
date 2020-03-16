@@ -13,4 +13,11 @@
 - register topic as a listener
 ```bash
 gsutil notification create -t ${topic} -f json gs://${bucket}
-```  
+```
+
+4. Enable 'Google Cloud Storage JSON API'
+
+## Deploy all Services
+```bash
+gcloud builds submit --config ./cloudbuild.yaml
+```
