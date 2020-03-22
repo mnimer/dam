@@ -1,14 +1,19 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
+	gcp "mikenimer.com/services/core/GcpUtils"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
 
 func TestParseCordLat(t *testing.T) {
 	lat := parseCoordString("43 deg 28' 2.81\" N")
@@ -30,27 +35,106 @@ func TestParseCordLng2(t *testing.T) {
 }
 
 
+func createPubSubMsg(t *testing.T, bucket, name, contentType string) string {
+	// Create a request to pass to our handler.
+	data := gcp.PubSubData{}
+	data.Bucket = bucket
+	data.Name = name
+	data.ContentType = contentType
+
+	dataJson, err := json.Marshal(data);
+	if( err != nil){
+		assert.Fail(t, "Json Encoding Error")
+	}
+	msg := gcp.PubSubMessage{}
+	msg.Message.ID = uuid.New().String()
+	msg.Message.Data = dataJson;
+	msg.Subscription = base64.StdEncoding.EncodeToString(dataJson)
+
+	testPubSubMsg, err := json.Marshal(msg);
+	if( err != nil){
+		assert.Fail(t, "Json Encoding Error")
+	}
+
+	return string(testPubSubMsg)
+}
+
+
+func TestJpgMsg(t *testing.T) {
+	_bucket := "mikenimer-dam-playground-content"
+	_name := "exif/jpg/Canon_40D.jpg"
+	_contentType := "image/jpg"
+	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
+	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
+
+	assert := assert.New(t)
+	assert.Equal(msgBody["Name"], _name)
+	assert.Equal(msgBody["Bucket"], _bucket)
+
+	//Test random metadata KV to make sure the file was parsed
+	var md map[string]interface{} = msgBody["Metadata"].(map[string]interface{});
+	assert.Equal(md["Technology"], "Cathode Ray Tube Display")
+	assert.Equal(md["DeviceManufacturer"], "Hewlett-Packard")
+	assert.Equal(md["Make"], "Canon")
+	//make sure these pointer to our tmp file are not included
+	assert.Nil(md["Directory"])
+	assert.Nil(md["FileName"])
+	assert.Nil(md["SourceFile"])
+}
+
+
 func TestJpgWithGPSMsg(t *testing.T) {
-	// Create a request to pass to our handler.
-	name := "exif/jpg/gps/DSCN0021.jpg"
-	bucket := "mikenimer-dam-playground-content"
-	file := bucket +"/" +name;
-	runObjectFinalizeMsg(t, name, bucket, file)
+	_bucket := "mikenimer-dam-playground-content"
+	_name := "exif/jpg/gps/DSCN0010.jpg"
+	_contentType := "image/jpg"
+	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
+	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
+
+	assert := assert.New(t)
+	assert.Equal(msgBody["Name"], _name)
+	assert.Equal(msgBody["Bucket"], _bucket)
+
+	//Test random metadata KV to make sure the file was parsed
+	var md map[string]interface{} = msgBody["Metadata"].(map[string]interface{});
+	assert.Equal(md["Model"], "COOLPIX P6000")
+	assert.Equal(md["GPSSatellites"], "06")
+	assert.Equal(md["GPSLatitude"], "43 deg 28' 2.81\" N")
+	assert.Equal(md["GPSLongitude"], "11 deg 53' 6.46\" E")
+	//make sure these pointer to our tmp file are not included
+	assert.Nil(md["Directory"])
+	assert.Nil(md["FileName"])
+	assert.Nil(md["SourceFile"])
+}
+
+func TestTiffMsg(t *testing.T) {
+	_bucket := "mikenimer-dam-playground-content"
+	_name := "exif/tiff/Arbitro.tiff"
+	_contentType := "image/jpg"
+	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
+	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
+
+	assert := assert.New(t)
+	assert.Equal(msgBody["Name"], _name)
+	assert.Equal(msgBody["Bucket"], _bucket)
+
+	//Test random metadata KV to make sure the file was parsed
+	var md map[string]interface{} = msgBody["Metadata"].(map[string]interface{});
+	assert.Equal(md["FileType"], "TIFF")
+	assert.Equal(md["Megapixels"], 0.007)
+	assert.Equal(md["ImageSize"], "174x38")
+	assert.Equal(md["PhotometricInterpretation"], "RGB")
+	//make sure these pointer to our tmp file are not included
+	assert.Nil(md["Directory"])
+	assert.Nil(md["FileName"])
+	assert.Nil(md["SourceFile"])
 }
 
 
-
-func TestTiffWithGPSMsg(t *testing.T) {
-	// Create a request to pass to our handler.
-	name := "exif/tiff/Arbitro.tiff"
-	bucket := "mikenimer-dam-playground-content"
-	file := bucket +"/" +name;
-	runObjectFinalizeMsg(t, name, bucket, file)
-}
-
-func runObjectFinalizeMsg(t *testing.T, name, bucket, file string) {
+func invokeObjectFinalizeMsg(t *testing.T, msg string) map[string]interface{} {
 	//file := "https://www.googleapis.com/storage/v1/b/mikenimer-dam-playground-content/o/AlaskanGlacier.jpg";
-	req, err := http.NewRequest("GET", "/?name=" +name +"&bucket=" +bucket +"&file=" +file, nil)
+
+	reader := strings.NewReader(msg)
+	req, err := http.NewRequest("GET", "/", reader)
 	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		t.Fatal(err)
@@ -71,24 +155,17 @@ func runObjectFinalizeMsg(t *testing.T, name, bucket, file string) {
 			status, http.StatusOK)
 	}
 
-	var msgBody Exif
+	var msgBody map[string]interface{}
 	//Parse the rest results
 	body, err := ioutil.ReadAll(rr.Body)
 	if err := json.Unmarshal(body, &msgBody); err != nil {
-		log.Printf("json.Unmarshal: %v", err)
-		return
+		log.Fatal("json.Unmarshal: " +err.Error())
+	}else {
+		assert := assert.New(t)
+		assert.Equal(rr.Code, 200, "Incorrect Response Code")
 	}
 
-	assert := assert.New(t)
-	assert.Equal(rr.Code, 200, "Incorrect Response Code")
-	assert.Equal(rr.Header().Get("Content-Type"), "application/json", "Incorrect Header")
-	assert.Equal(msgBody.Name, name)
-	assert.Equal(msgBody.Bucket, bucket)
-	assert.Equal(msgBody.FileId, file)
-
-	m, err := json.Marshal(msgBody)
-	println("Results: -----")
-	println(string(m))
+	return msgBody
 }
 
 

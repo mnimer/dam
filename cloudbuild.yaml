@@ -16,10 +16,7 @@ steps:
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
     dir: 'services/core/MetaDataFileWriter'
     waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/core/PubSubHandler'
-    waitFor: ['-']
+
 #### Images
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']

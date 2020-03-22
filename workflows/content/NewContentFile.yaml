@@ -16,11 +16,17 @@
           Next: image_ExifParser
 
 
+
 - image_ExifParser:
     Type: HTTP
     Params:
       URL: https://services-images-exifparser-5txyoqdyga-uc.a.run.app
       Method: POST
+      Body:
+        bucket: “${attrs.bucket}”
+        name: “${attrs.name}”
+        file: “${attrs.file}”
+
     Output: exifResult
     Next: core_MetadataFileWriter
 - core_MetadataFileWriter:

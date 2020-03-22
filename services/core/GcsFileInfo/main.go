@@ -2,12 +2,14 @@
 package main
 
 import (
+	gcp "mikenimer.com/services/core/GcpUtils"
 	"cloud.google.com/go/storage"
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -26,32 +28,40 @@ func main() {
 	}
 }
 
+
+
+
 // HelloPubSub receives and processes a Pub/Sub push message.
 func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
-	//get NAME parameters
-	names, ok := r.URL.Query()["name"]
-	if !ok || len(names) != 1 {
-		log.Fatal("Single Url Param 'name' is missing")
-		return
-	}
-	//get Bucket parameters
-	buckets, ok := r.URL.Query()["bucket"]
-	if !ok || len(buckets) != 1 {
-		log.Fatal("Single Url Param 'bucket' is missing")
-		return
+	msgBody, pErr := gcp.ParsePubSubMessage(w, r)
+	if( pErr != nil ){
+		println(pErr)
+		w.WriteHeader(http.StatusInternalServerError)
+		//w.Write(pErr)
 	}
 
-	log.Printf("Core GcsFile Info | gs://%s/%s", buckets[0], names[0] )
+	_bucket := msgBody.Bucket
+	_name := msgBody.Name
+	log.Printf("Core GcsFile Info | gs://%s/%s", _bucket, _name )
 
-	attr,err := getFileInfo(buckets[0], names[0])
-	if err != nil { /* todo */ }
+	attr, error := getFileInfo(_bucket, _name)
+	if error != nil {
+		println("Error getting FileInfo")
+		println(error)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+
+	//Send to one of two paths, Content Parsing or Indexing Metadata
+	ForwardToPubSubTopics(attr)
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(attr)
-
+	//w.Header().Set("Content-Type", "application/json")
+	//json.NewEncoder(w).Encode(attr)
 }
+
+
 
 func getFileInfo(bucket string, name string) (*storage.ObjectAttrs, error) {
 	ctx := context.Background()
@@ -61,13 +71,15 @@ func getFileInfo(bucket string, name string) (*storage.ObjectAttrs, error) {
 	}
 
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
 	defer cancel()
 	o := client.Bucket(bucket).Object(name)
 	attrs, err := o.Attrs(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	/**
 	log.Printf("Bucket: %v\n", attrs.Bucket)
 	log.Printf("CacheControl: %v\n", attrs.CacheControl)
 	log.Printf("ContentDisposition: %v\n", attrs.ContentDisposition)
@@ -91,7 +103,35 @@ func getFileInfo(bucket string, name string) (*storage.ObjectAttrs, error) {
 	log.Print("\n\nMetadata\n")
 	for key, value := range attrs.Metadata {
 		log.Printf("\t%v = %v\n", key, value)
-	}
+	}**/
+
 
 	return attrs, nil
 }
+
+
+
+func ForwardToPubSubTopics(attrs *storage.ObjectAttrs) {
+	msg, err := json.Marshal(attrs)
+	if err == nil && attrs != nil {
+		//Split the topics into two branchs, once for .metadata hidden files, that need to be indexed
+		if( strings.HasPrefix(attrs.Name, ".metadata")){
+			println("Send to gcs-metadata-handlers")
+			println(string(msg))
+			gcp.SendToPubSub("gcs-metadata-handlers", msg)
+		}else {
+			// Send to image  format specific topics
+			if strings.HasPrefix(attrs.ContentType, "image/") {
+				println("Send to gcs-image-handlers")
+				println(string(msg))
+				gcp.SendToPubSub("gcs-image-handlers", msg)
+			} else if strings.HasPrefix(attrs.ContentType, "video/") {
+				println("Send to gcs-video-handlers")
+				println(string(msg))
+				gcp.SendToPubSub("gcs-video-handlers", msg)
+			}
+		}
+	}
+}
+
+

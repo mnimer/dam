@@ -2,21 +2,18 @@
 package main
 
 import (
-	"cloud.google.com/go/storage"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/barasher/go-exiftool"
 	"github.com/mitchellh/mapstructure"
-	"io/ioutil"
 	"log"
+	gcp "mikenimer.com/services/core/GcpUtils"
 	"net/http"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -37,123 +34,101 @@ func main() {
 func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	///////
 	//Validate Arguments
-
-	//get URL parameters
-	files, ok := r.URL.Query()["file"]
-	if !ok || len(files) != 1 {
-		log.Println("Single Url Param 'file' is missing")
-		return
-	}
-	//get NAME parameters
-	names, ok := r.URL.Query()["name"]
-	if !ok || len(names) != 1 {
-		log.Fatal("Single Url Param 'name' is missing")
-		return
-	}
-	//get Bucket parameters
-	buckets, ok := r.URL.Query()["bucket"]
-	if !ok || len(buckets) != 1 {
-		log.Fatal("Single Url Param 'bucket' is missing")
+	msgBody, pErr := gcp.ParsePubSubMessage(w, r)
+	if( pErr != nil ){
+		log.Fatal(pErr)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(pErr.Error()))
 		return
 	}
 
+	_bucket:=msgBody.Bucket
+	_name:=msgBody.Name
+	log.Printf("Image EXIF Parser | gs://%s/%s", _bucket, _name )
 
-	log.Printf("Image EXIF Parser | gs://%s/%s", buckets[0], names[0] )
 
-	//get local var
-	file := files[0]
-	name := names[0]
-	bucket := buckets[0]
-
-	///////
 	// Process File
+	filePath, err := gcp.DownloadFile(_bucket, _name)
+	if( err != nil ){
+		log.Fatal(err.Error())
+	}
 
-	//download file from GCS
-	fileBytes, gcsErr := DownloadFile(bucket, name, file)
-	if gcsErr != nil {
-		log.Fatal("Unable to download file `" + file + "`")
-	}
-	//save file to tmp dir
-	filePath, err := WriteTempFile(name, fileBytes)
-	if err != nil {
-		log.Fatal("Unable to save file `" + file + "`")
-	}
 	//delete tmp file at end of method call
-	defer DeleteTempFile(filePath.Name())
+	defer gcp.DeleteTempFile(filePath.Name())
 
-	// Query()["files"] will return an array of items, we only want the single item.
+	// Parse
 	metadata, err := ParseExif(filePath.Name())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	exif := FormatResults(bucket, name, file, metadata)
 
+	//break into multiple parts and send over PubSub
+	FormatAndSaveProperties(_bucket, _name, metadata)
+
+
+	//return if called via http
 	w.WriteHeader(http.StatusOK)
+	m :=  make(map[string]interface{})
+	m["Name"] = _name
+	m["Bucket"] = _bucket
+	m["Metadata"] = metadata
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(exif)
+	json.NewEncoder(w).Encode(m)
 }
 
-func DownloadFile(bucket, name, file string) ([]byte, error) {
-	// [START download_file]
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return nil, err
+
+// Format the exif metadata into multiple smaller objects then
+// Send the metadata to Pub/Sub
+func FormatAndSaveProperties(bucket, name string ,metadata map[string]interface{}) {
+
+	primaryTags, err1 := FormatPrimary(bucket, name, metadata)
+	if( err1 == nil ) {
+		primaryJson, err2 := json.Marshal(primaryTags)
+		if (err2 == nil) {
+			gcp.SaveMetadataFile(bucket, "exif.primary.json", primaryJson)
+		}else{
+			log.Println("Error parsing exif PrimaryTags | " +err2.Error())
+		}
 	}
 
-	//filePart := strings.TrimLeft(file, bucket +"/")
-	//object := bucket + ":" + name
-	ctx, cancel := context.WithTimeout(ctx, time.Second*300) //todo: make this timeout configurable
-	defer cancel()
-	rc, err := client.Bucket(bucket).Object(name).NewReader(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
 
-	data, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
+	exifTags, err3 := FormatExifTags(bucket, name, metadata)
+	if( err3 == nil ) {
+		exifJson, err4 := json.Marshal(exifTags)
+		if (err4 == nil) {
+			gcp.SaveMetadataFile(bucket, "exif.tags.json", exifJson)
+		} else {
+			log.Println("Error parsing exif Tags | " + err4.Error())
+		}
 	}
-	return data, nil
-	// [END download_file]
+
+
+	gpsTags, err5 := FormatGps(bucket, name, metadata)
+	if( err5 == nil ) {
+		gpsJson, err6 := json.Marshal(gpsTags)
+		if (err6 == nil) {
+			gcp.SaveMetadataFile(bucket, "exif.gps.json", gpsJson)
+		} else {
+			log.Println("Error parsing gps Tags | " + err6.Error())
+		}
+	}
+
+	geoTags, err7 := FormatGeo(bucket, name, metadata)
+	if( err7 == nil ) {
+		geoJson, err8 := json.Marshal(geoTags)
+		if (err8 == nil) {
+			gcp.SaveMetadataFile(bucket, "geo.json", geoJson)
+		} else {
+			log.Println("Error parsing geo Tags | " + err8.Error())
+		}
+	}
 }
 
-//Save file Bytes to tmp dir
-func WriteTempFile(name string, file []byte) (*os.File, error) {
 
-	// Create our Temp File:  This will create a filename like /tmp/prefix-123456
-	// We can use a pattern of "pre-*.txt" to get an extension like: /tmp/pre-123456.txt
-	nameParts := strings.SplitAfter(name, ".")
-	ext := nameParts[len(nameParts)-1]
-
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "exif-*."+ext)
-	if err != nil {
-		log.Fatal("Cannot create temporary file", err)
-	}
-	//fmt.Println("Created Tmp File: " + tmpFile.Name())
-
-	// Example writing to the file
-	data := []byte(file)
-	if _, err = tmpFile.Write(data); err != nil {
-		log.Fatal("Failed to write to temporary file", err)
-	}
-
-	// Close the file
-	if err := tmpFile.Close(); err != nil {
-		log.Fatal(err)
-	}
-
-	return tmpFile, nil
-}
-
-//Delete tmp file
-func DeleteTempFile(filePath string) {
-	// Remember to clean up the file afterwards
-	os.Remove(filePath)
-}
-
+// Parse EXIF data out of the supported files, using a wrapper around the popular EXIFTOOL
+// This method will return a KV list of all tags in the file.  We will break these into
+// different files later, in the Format* methods.
 func ParseExif(file string) (map[string]interface{}, error) {
 	et, err := exiftool.NewExiftool()
 	if err != nil {
@@ -169,47 +144,63 @@ func ParseExif(file string) (map[string]interface{}, error) {
 		}
 	}
 
+	delete(fileInfos[0].Fields, "Directory")
+	delete(fileInfos[0].Fields, "FileName")
+	delete(fileInfos[0].Fields, "SourceFile")
 	return fileInfos[0].Fields, nil
 }
 
-func FormatResults(bucket string, name string, file string, metadata map[string]interface{}) interface{} {
-	//Initialize
-	e := Exif{file, bucket, name, ExifMetadata{PrimaryTags{}, GpsTags{}, make(map[string]interface{})}}
 
-	primaryKeys := reflect.TypeOf(e.Metadata.PrimaryTags)
+
+// Pull out the key Primary tags that are common in
+// If none of the known keys exists, will return nil so we do not save a file.
+func FormatPrimary(bucket string, name string, metadata map[string]interface{}) (ExifPrimary, error) {
+
+	primaryTags := ExifPrimary{bucket, name, PrimaryTags{}}
+
+	keysFound := false
+	primaryKeys := reflect.TypeOf(primaryTags)
 	primaryMap := make(map[string]interface{})
 	for i := 0; i < primaryKeys.NumField(); i++ {
 		name := primaryKeys.Field(i).Name
 		if metadata[name] != nil {
+			keysFound = true
 			primaryMap[name] = metadata[name]
 		}
 	}
-	mapstructure.Decode(primaryMap, &e.Metadata.PrimaryTags)
+	mapstructure.Decode(primaryMap, &primaryTags)
 
-	gpsKeys := reflect.TypeOf(e.Metadata.GpsTags)
-	gpsMap := make(map[string]interface{})
-	for i := 0; i < gpsKeys.NumField(); i++ {
-		name := gpsKeys.Field(i).Name
-		if metadata[name] != nil {
-			if name == "GPSLongitude" || name == "GPSLatitude" {
-				gpsMap[name] = fmt.Sprintf("%f", parseCoordString(metadata[name].(string)))
-			} else {
-				gpsMap[name] = metadata[name]
-			}
-		}
+	if( !keysFound ){
+		e := errors.New("No keys found")
+		return primaryTags, e
 	}
+	return primaryTags, nil
+}
 
-	gpsStruct := &e.Metadata.GpsTags
-	mapstructure.Decode(gpsMap, gpsStruct)
-	//e.Metadata.GpsTags = gpsStruct
+
+// Pull out all of the exif tags (excluding primary and gps)
+// If none of the known keys exists, will return nil so we do not save a file.
+func FormatExifTags(bucket string, name string, metadata map[string]interface{}) (ExifTags, error) {
+	//Initialize
+	primaryTags := ExifPrimary{}
+	gpsTags := ExifGps{}
+	exifTags := ExifTags{bucket, name, make(map[string]interface{})}
+
 
 	//Save the rest in a open map object
+	keysFound := false
+	primaryKeys := reflect.TypeOf(primaryTags)
+	gpsKeys := reflect.TypeOf(gpsTags)
 	for k, v := range metadata {
-		if primaryMap[k] == nil && gpsMap[k] == nil {
+		pField, pBool := primaryKeys.FieldByName(k)
+		gField, gBool := gpsKeys.FieldByName(k)
+
+		if (pField.Name  == k && !pBool) || (gField.Name == k && !gBool) {
 			if( k == "SourceFile" || k == "Directory"){
 				//skip, it is pointing to the cloud run tmp dir, useless
 			}else {
-				e.Metadata.ExifTags[k] = v;
+				keysFound = true
+				exifTags.Metadata[k] = v;
 			}
 		} else {
 			//do nothing, because it is already in one of the other metadata structs
@@ -217,9 +208,83 @@ func FormatResults(bucket string, name string, file string, metadata map[string]
 		}
 	}
 
-	return e
+	if( !keysFound ){
+		e := errors.New("No keys found")
+		return exifTags, e
+	}
+	return exifTags, nil
 }
 
+
+//Pull out the GPS specific tags from the exif file
+// If none of the known keys exists, will return nil so we do not save a file.
+func FormatGps(bucket string, name string, metadata map[string]interface{}) (ExifGps, error) {
+	//Initialize
+	gpsTags := ExifGps{bucket, name, GpsTags{}}
+
+	keysFound := false
+	gpsKeys := reflect.TypeOf(gpsTags)
+	gpsMap := make(map[string]interface{})
+	for i := 0; i < gpsKeys.NumField(); i++ {
+		name := gpsKeys.Field(i).Name
+		if metadata[name] != nil {
+			keysFound = true;
+			gpsMap[name] = metadata[name]
+		}
+	}
+	gpsStruct := &gpsTags
+	mapstructure.Decode(gpsMap, gpsStruct)
+
+
+	if( !keysFound ){
+		e := errors.New("No keys found")
+		return gpsTags, e
+	}
+	return gpsTags, nil
+}
+
+
+// Extract the  Lat/Lng properties from the GPS keys and save in a generic way
+// We are going to save this in a generic way because there could be other ways to figure out the geo props of a file, not just exif
+// If none of the known keys exists, will return nil so we do not save a file.
+func FormatGeo(bucket string, name string, metadata map[string]interface{}) (ExifGeo, error) {
+	//Initialize
+	gpsTags := ExifGps{bucket, name, GpsTags{}}
+	geoTags := ExifGeo{bucket, name, Geo{}}
+
+
+	keysFound := false
+	gpsKeys := reflect.TypeOf(gpsTags)
+	gpsMap := make(map[string]interface{})
+	for i := 0; i < gpsKeys.NumField(); i++ {
+		name := gpsKeys.Field(i).Name
+		if metadata[name] != nil {
+			//pull out the GPS Lat/Lng  columns and save as generic lat/lng properties
+			if name == "GPSLongitude" || name == "GPSLatitude" {
+				keysFound = true
+				val := parseCoordString(metadata[name].(string))
+				gpsMap[name] = val
+				if name == "GPSLongitude" {
+					geoTags.Metadata.Longitude = val
+				}else if name == "GPSLatitude" {
+					geoTags.Metadata.Latitude = val
+				}
+			}
+		}
+	}
+	gpsStruct := &gpsTags
+	mapstructure.Decode(gpsMap, gpsStruct)
+
+	if( !keysFound ){
+		e := errors.New("No keys found")
+		return geoTags, e
+	}
+	return geoTags, nil
+}
+
+
+
+// Parse the lat/lng strings returned from the ExifTool and parse into a valid float number
 func parseCoordString(gpsLatLng string) float64 {
 	clean := strings.ReplaceAll(gpsLatLng, "'", "")
 	clean = strings.ReplaceAll(clean, "\"", "")
@@ -239,3 +304,4 @@ func parseCoordString(gpsLatLng string) float64 {
 	}
 
 }
+
