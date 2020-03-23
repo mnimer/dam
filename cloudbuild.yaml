@@ -22,6 +22,18 @@ steps:
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
     dir: 'services/images/ExifParser'
     waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/images/VisionFacesApi'
+    waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/images/VisionLandmarkApi'
+    waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/images/VisionPropertiesApi'
+    waitFor: ['-']
 
 
 #options:

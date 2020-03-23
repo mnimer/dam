@@ -1,6 +1,6 @@
 module mikenimer.com/services/core/GcsFileInfo
 
-go 1.13
+go 1.14
 
 require (
     mikenimer.com/services/core/GcpUtils v1.0.0

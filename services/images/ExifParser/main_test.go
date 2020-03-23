@@ -62,7 +62,7 @@ func createPubSubMsg(t *testing.T, bucket, name, contentType string) string {
 
 func TestJpgMsg(t *testing.T) {
 	_bucket := "mikenimer-dam-playground-content"
-	_name := "exif/jpg/Canon_40D.jpg"
+	_name := "unit-tests/exif/jpg/Canon_40D.jpg"
 	_contentType := "image/jpg"
 	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
 	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
@@ -85,7 +85,7 @@ func TestJpgMsg(t *testing.T) {
 
 func TestJpgWithGPSMsg(t *testing.T) {
 	_bucket := "mikenimer-dam-playground-content"
-	_name := "exif/jpg/gps/DSCN0010.jpg"
+	_name := "unit-tests/exif/jpg/gps/DSCN0010.jpg"
 	_contentType := "image/jpg"
 	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
 	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
@@ -96,10 +96,10 @@ func TestJpgWithGPSMsg(t *testing.T) {
 
 	//Test random metadata KV to make sure the file was parsed
 	var md map[string]interface{} = msgBody["Metadata"].(map[string]interface{});
-	assert.Equal(md["Model"], "COOLPIX P6000")
-	assert.Equal(md["GPSSatellites"], "06")
-	assert.Equal(md["GPSLatitude"], "43 deg 28' 2.81\" N")
-	assert.Equal(md["GPSLongitude"], "11 deg 53' 6.46\" E")
+	assert.Equal("COOLPIX P6000", md["Model"], )
+	assert.Equal("06", md["GPSSatellites"])
+	assert.Equal("43 deg 28' 2.81\" N", md["GPSLatitude"])
+	assert.Equal("11 deg 53' 6.46\" E", md["GPSLongitude"])
 	//make sure these pointer to our tmp file are not included
 	assert.Nil(md["Directory"])
 	assert.Nil(md["FileName"])
@@ -108,7 +108,7 @@ func TestJpgWithGPSMsg(t *testing.T) {
 
 func TestTiffMsg(t *testing.T) {
 	_bucket := "mikenimer-dam-playground-content"
-	_name := "exif/tiff/Arbitro.tiff"
+	_name := "unit-tests/exif/tiff/Arbitro.tiff"
 	_contentType := "image/jpg"
 	testPubSubMsg := createPubSubMsg(t, _bucket, _name, _contentType)
 	msgBody := invokeObjectFinalizeMsg(t, string(testPubSubMsg))
@@ -119,10 +119,10 @@ func TestTiffMsg(t *testing.T) {
 
 	//Test random metadata KV to make sure the file was parsed
 	var md map[string]interface{} = msgBody["Metadata"].(map[string]interface{});
-	assert.Equal(md["FileType"], "TIFF")
-	assert.Equal(md["Megapixels"], 0.007)
-	assert.Equal(md["ImageSize"], "174x38")
-	assert.Equal(md["PhotometricInterpretation"], "RGB")
+	assert.Equal("TIFF", md["FileType"] )
+	assert.Equal(0.007, md["Megapixels"])
+	assert.Equal("174x38", md["ImageSize"] )
+	assert.Equal("RGB", md["PhotometricInterpretation"])
 	//make sure these pointer to our tmp file are not included
 	assert.Nil(md["Directory"])
 	assert.Nil(md["FileName"])

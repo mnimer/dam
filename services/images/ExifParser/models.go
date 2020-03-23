@@ -1,24 +1,30 @@
 package main
 
+import "time"
+
 type ExifPrimary struct {
-	Bucket	string
-	Name 	string
-	Metadata PrimaryTags
+	Bucket	string			`json:"bucket"`
+	Name 	string			`json:"name"`
+	DateTime time.Time		`json:"datetime"`
+	Metadata PrimaryTags	`json:"metadata"`
 }
 type ExifGps struct {
-	Bucket 	string
-	Name 	string
-	Metadata GpsTags
+	Bucket	string			`json:"bucket"`
+	Name 	string			`json:"name"`
+	DateTime time.Time		`json:"datetime"`
+	Metadata GpsTags		`json:"metadata"`
 }
 type ExifGeo struct {
-	Bucket 	string
-	Name 	string
-	Metadata Geo
+	Bucket	string			`json:"bucket"`
+	Name 	string			`json:"name"`
+	DateTime time.Time		`json:"datetime"`
+	Metadata Geo			`json:"metadata"`
 }
 type ExifTags struct {
-	Bucket 	string
-	Name 	string
-	Metadata map[string]interface{}
+	Bucket	string			`json:"bucket"`
+	Name 	string			`json:"name"`
+	DateTime time.Time		`json:"datetime"`
+	Metadata map[string]interface{}	`json:"metadata"`
 }
 
 

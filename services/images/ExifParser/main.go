@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -86,7 +87,7 @@ func FormatAndSaveProperties(bucket, name string ,metadata map[string]interface{
 	if( err1 == nil ) {
 		primaryJson, err2 := json.Marshal(primaryTags)
 		if (err2 == nil) {
-			gcp.SaveMetadataFile(bucket, "exif.primary.json", primaryJson)
+			gcp.SaveMetadataFile(bucket, name, "exif.primary.json", primaryJson)
 		}else{
 			log.Println("Error parsing exif PrimaryTags | " +err2.Error())
 		}
@@ -97,7 +98,7 @@ func FormatAndSaveProperties(bucket, name string ,metadata map[string]interface{
 	if( err3 == nil ) {
 		exifJson, err4 := json.Marshal(exifTags)
 		if (err4 == nil) {
-			gcp.SaveMetadataFile(bucket, "exif.tags.json", exifJson)
+			gcp.SaveMetadataFile(bucket, name,"exif.tags.json", exifJson)
 		} else {
 			log.Println("Error parsing exif Tags | " + err4.Error())
 		}
@@ -108,7 +109,7 @@ func FormatAndSaveProperties(bucket, name string ,metadata map[string]interface{
 	if( err5 == nil ) {
 		gpsJson, err6 := json.Marshal(gpsTags)
 		if (err6 == nil) {
-			gcp.SaveMetadataFile(bucket, "exif.gps.json", gpsJson)
+			gcp.SaveMetadataFile(bucket, name, "exif.gps.json", gpsJson)
 		} else {
 			log.Println("Error parsing gps Tags | " + err6.Error())
 		}
@@ -118,7 +119,7 @@ func FormatAndSaveProperties(bucket, name string ,metadata map[string]interface{
 	if( err7 == nil ) {
 		geoJson, err8 := json.Marshal(geoTags)
 		if (err8 == nil) {
-			gcp.SaveMetadataFile(bucket, "geo.json", geoJson)
+			gcp.SaveMetadataFile(bucket, name, "geo.json", geoJson)
 		} else {
 			log.Println("Error parsing geo Tags | " + err8.Error())
 		}
@@ -156,7 +157,7 @@ func ParseExif(file string) (map[string]interface{}, error) {
 // If none of the known keys exists, will return nil so we do not save a file.
 func FormatPrimary(bucket string, name string, metadata map[string]interface{}) (ExifPrimary, error) {
 
-	primaryTags := ExifPrimary{bucket, name, PrimaryTags{}}
+	primaryTags := ExifPrimary{bucket, name, time.Now(), PrimaryTags{}}
 
 	keysFound := false
 	primaryKeys := reflect.TypeOf(primaryTags)
@@ -184,7 +185,7 @@ func FormatExifTags(bucket string, name string, metadata map[string]interface{})
 	//Initialize
 	primaryTags := ExifPrimary{}
 	gpsTags := ExifGps{}
-	exifTags := ExifTags{bucket, name, make(map[string]interface{})}
+	exifTags := ExifTags{bucket, name, time.Now(), make(map[string]interface{})}
 
 
 	//Save the rest in a open map object
@@ -220,7 +221,7 @@ func FormatExifTags(bucket string, name string, metadata map[string]interface{})
 // If none of the known keys exists, will return nil so we do not save a file.
 func FormatGps(bucket string, name string, metadata map[string]interface{}) (ExifGps, error) {
 	//Initialize
-	gpsTags := ExifGps{bucket, name, GpsTags{}}
+	gpsTags := ExifGps{bucket, name, time.Now(),GpsTags{}}
 
 	keysFound := false
 	gpsKeys := reflect.TypeOf(gpsTags)
@@ -249,8 +250,8 @@ func FormatGps(bucket string, name string, metadata map[string]interface{}) (Exi
 // If none of the known keys exists, will return nil so we do not save a file.
 func FormatGeo(bucket string, name string, metadata map[string]interface{}) (ExifGeo, error) {
 	//Initialize
-	gpsTags := ExifGps{bucket, name, GpsTags{}}
-	geoTags := ExifGeo{bucket, name, Geo{}}
+	gpsTags := ExifGps{bucket, name, time.Now(), GpsTags{}}
+	geoTags := ExifGeo{bucket, name, time.Now(), Geo{}}
 
 
 	keysFound := false

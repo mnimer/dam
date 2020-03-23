@@ -9,9 +9,9 @@ import (
 
 
 
-func SaveMetadataFile(bucket, fileName string, content []byte) int {
+func SaveMetadataFile(bucket, name, fileName string, content []byte) int {
 	//get hidden dir to store metadata
-	dirName := GetMetadataFolder(fileName)
+	dirName := GetMetadataFolder(name)
 
 	//setup client
 	ctx := context.Background()
