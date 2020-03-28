@@ -2,8 +2,6 @@
 package main
 
 import (
-	gcp "mikenimer.com/services/core/GcpUtils"
-	"cloud.google.com/go/storage"
 	"context"
 	"encoding/json"
 	"log"
@@ -11,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+	"cloud.google.com/go/storage"
+	gcp "mikenimer.com/services/core/GcpUtils"
 )
 
 func main() {
@@ -28,14 +28,11 @@ func main() {
 	}
 }
 
-
-
-
 // HelloPubSub receives and processes a Pub/Sub push message.
 func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	msgBody, pErr := gcp.ParsePubSubMessage(w, r)
-	if( pErr != nil ){
+	if pErr != nil {
 		println(pErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		//w.Write(pErr)
@@ -43,7 +40,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	_bucket := msgBody.Bucket
 	_name := msgBody.Name
-	log.Printf("Core GcsFile Info | gs://%s/%s", _bucket, _name )
+	log.Printf("Core GcsFile Info | gs://%s/%s", _bucket, _name)
 
 	attr, error := getFileInfo(_bucket, _name)
 	if error != nil {
@@ -51,7 +48,6 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		println(error)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-
 
 	//Send to one of two paths, Content Parsing or Indexing Metadata
 	ForwardToPubSubTopics(attr)
@@ -61,15 +57,12 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	//json.NewEncoder(w).Encode(attr)
 }
 
-
-
 func getFileInfo(bucket string, name string) (*storage.ObjectAttrs, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
 	defer cancel()
@@ -105,21 +98,18 @@ func getFileInfo(bucket string, name string) (*storage.ObjectAttrs, error) {
 		log.Printf("\t%v = %v\n", key, value)
 	}**/
 
-
 	return attrs, nil
 }
-
-
 
 func ForwardToPubSubTopics(attrs *storage.ObjectAttrs) {
 	msg, err := json.Marshal(attrs)
 	if err == nil && attrs != nil {
 		//Split the topics into two branchs, once for .metadata hidden files, that need to be indexed
-		if( strings.HasPrefix(attrs.Name, ".metadata")){
+		if strings.HasPrefix(attrs.Name, ".metadata") {
 			println("Send to gcs-metadata-handlers")
 			println(string(msg))
 			gcp.SendToPubSub("gcs-metadata-handlers", msg)
-		}else {
+		} else {
 			// Send to image  format specific topics
 			if strings.HasPrefix(attrs.ContentType, "image/") {
 				println("Send to gcs-image-handlers")
@@ -133,5 +123,3 @@ func ForwardToPubSubTopics(attrs *storage.ObjectAttrs) {
 		}
 	}
 }
-
-

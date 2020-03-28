@@ -4,10 +4,10 @@ go 1.14
 
 require (
     mikenimer.com/services/core/GcpUtils v1.0.0
-	cloud.google.com/go/pubsub v1.3.1
-	cloud.google.com/go/storage v1.6.0
+	cloud.google.com/go/pubsub v1.3.1 // indirect
+	cloud.google.com/go/storage v1.6.0 // indirect
 	github.com/golang/protobuf v1.3.5 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
 	golang.org/x/sys v0.0.0-20200316230553-a7d97aace0b0 // indirect
 	golang.org/x/tools v0.0.0-20200316212524-3e76bee198d8 // indirect

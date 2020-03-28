@@ -6,9 +6,6 @@ import (
 	"log"
 )
 
-
-
-
 func SaveMetadataFile(bucket, name, fileName string, content []byte) int {
 	//get hidden dir to store metadata
 	dirName := GetMetadataFolder(name)

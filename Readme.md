@@ -21,3 +21,9 @@ gsutil notification create -t ${topic} -f json gs://${bucket}
 ```bash
 gcloud builds submit --config ./cloudbuild.yaml
 ```
+
+# ToDo
+- add audio parsers
+    - MP3 metadata
+    - Text Parsing out of audio (samples: https://archive.org/details/opensource_audio?and[]=conversation&sin=&and[]=mediatype%3A%22audio%22)
+     

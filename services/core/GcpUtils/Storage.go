@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-
 func DownloadFile(_bucket string, _name string) (*os.File, error) {
 	//download file from GCS
 	fileBytes, gcsErr := DownloadGcsFile(_bucket, _name)
@@ -25,8 +24,6 @@ func DownloadFile(_bucket string, _name string) (*os.File, error) {
 
 	return filePath, err
 }
-
-
 
 func DownloadGcsFile(bucket, name string) ([]byte, error) {
 	// [START download_file]
@@ -53,7 +50,6 @@ func DownloadGcsFile(bucket, name string) ([]byte, error) {
 	return data, nil
 	// [END download_file]
 }
-
 
 //Save file Bytes to tmp dir
 func WriteTempFile(name string, file []byte) (*os.File, error) {

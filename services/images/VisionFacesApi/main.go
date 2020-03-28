@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-type FaceApiResult struct{
-	Bucket	string			`json:"bucket"`
-	Name 	string			`json:"name"`
-	DateTime time.Time		`json:"datetime"`
-	Metadata []*vision3.FaceAnnotation	`json:"metadata"`
+type FaceApiResult struct {
+	Bucket   string                    `json:"bucket"`
+	Name     string                    `json:"name"`
+	DateTime time.Time                 `json:"datetime"`
+	Metadata []*vision3.FaceAnnotation `json:"metadata"`
 }
 
 func main() {
@@ -34,34 +34,31 @@ func main() {
 	}
 }
 
-
-
 // MessageHandler receives and processes a Pub/Sub push message.
 func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	///////
 	//Validate Arguments
 	msgBody, pErr := gcp.ParsePubSubMessage(w, r)
-	if( pErr != nil ){
+	if pErr != nil {
 		log.Fatal(pErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(pErr.Error()))
 		return
 	}
 
-	_bucket:=msgBody.Bucket
-	_name:=msgBody.Name
-	log.Printf("Image VisionAPI Parser | gs://%s/%s", _bucket, _name )
-
+	_bucket := msgBody.Bucket
+	_name := msgBody.Name
+	log.Printf("Image VisionAPI Parser | gs://%s/%s", _bucket, _name)
 
 	apiResults, err := callVisionApi(_bucket, _name)
 
-	if( err != nil ){
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err.Error())
 	} else {
-		if (len(apiResults) > 0) {
+		if len(apiResults) > 0 {
 			resultsJson, err2 := json.Marshal(apiResults)
-			if (err2 == nil) {
+			if err2 == nil {
 				gcp.SaveMetadataFile(_bucket, _name, "visionapi.faces.json", resultsJson)
 			} else {
 				log.Println("Error parsing VisionAPI Faces | " + err2.Error())
@@ -70,7 +67,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
 		//return if called via http
 		w.WriteHeader(http.StatusOK)
-		m :=  FaceApiResult{}
+		m := FaceApiResult{}
 		m.Name = _name
 		m.Bucket = _bucket
 		m.DateTime = time.Now()
@@ -79,8 +76,6 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(m)
 	}
 }
-
-
 
 func callVisionApi(bucket string, name string) ([]*vision3.FaceAnnotation, error) {
 	ctx := context.Background()

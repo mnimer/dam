@@ -10,7 +10,6 @@ import (
 	"net/http"
 )
 
-
 // PubSubMessage is the payload of a Pub/Sub event.
 type PubSubMessage struct {
 	Message struct {
@@ -21,25 +20,24 @@ type PubSubMessage struct {
 }
 
 type PubSubData struct {
-	Kind string 					`json:"kind"`
-	Id string						`json:"id"`
-	Selflink string					`json:"selflink"`
-	Name string						`json:"name"`
-	Bucket string					`json:"bucket"`
-	Generation string				`json:"generation"`
-	Metageneration string			`json:"metageneration"`
-	ContentType string				`json:"contentType"`
-	TimeCreated string				`json:"timeCreated"`
-	Updated string					`json:"updated"`
-	StorageClass string				`json:"storageClass"`
-	TimeStorageClassUpdated  string	`json:"timeStorageClassUpdated"`
-	Size string						`json:"size"`
-	Md5Hash string					`json:"md5Hash"`
-	MediaLink string				`json:"mediaLink"`
-	Crc32c string					`json:"crc32c"`
-	Etag string						`json:"etag"`
+	Kind                    string `json:"kind"`
+	Id                      string `json:"id"`
+	Selflink                string `json:"selflink"`
+	Name                    string `json:"name"`
+	Bucket                  string `json:"bucket"`
+	Generation              string `json:"generation"`
+	Metageneration          string `json:"metageneration"`
+	ContentType             string `json:"contentType"`
+	TimeCreated             string `json:"timeCreated"`
+	Updated                 string `json:"updated"`
+	StorageClass            string `json:"storageClass"`
+	TimeStorageClassUpdated string `json:"timeStorageClassUpdated"`
+	Size                    string `json:"size"`
+	Md5Hash                 string `json:"md5Hash"`
+	MediaLink               string `json:"mediaLink"`
+	Crc32c                  string `json:"crc32c"`
+	Etag                    string `json:"etag"`
 }
-
 
 func ParsePubSubMessage(w http.ResponseWriter, r *http.Request) (PubSubData, error) {
 	var m PubSubMessage
@@ -49,7 +47,7 @@ func ParsePubSubMessage(w http.ResponseWriter, r *http.Request) (PubSubData, err
 		log.Printf("ioutil.ReadAll: %v", err)
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return PubSubData{}, err
-	}else{
+	} else {
 		println("body----")
 		println(string(body))
 	}
@@ -69,11 +67,9 @@ func ParsePubSubMessage(w http.ResponseWriter, r *http.Request) (PubSubData, err
 	return msgBody, nil
 }
 
-
-
-func SendToPubSub( topic string, msg []byte ) (error) {
+func SendToPubSub(topic string, msg []byte) error {
 	projectId, err := GetProjectId()
-	if( err != nil ){
+	if err != nil {
 		return err
 	}
 	ctx := context.Background()
@@ -89,4 +85,3 @@ func SendToPubSub( topic string, msg []byte ) (error) {
 
 	return nil
 }
-

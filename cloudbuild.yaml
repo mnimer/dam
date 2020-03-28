@@ -17,23 +17,41 @@ steps:
     dir: 'services/core/MetaDataFileWriter'
     waitFor: ['-']
 
+#### Metadata
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/metadata/DataCatalogIndexer'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/metadata/BigQueryIndexer'
+#    waitFor: ['-']
+
 #### Images
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/images/ExifParser'
-    waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/images/VisionFacesApi'
-    waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/images/VisionLandmarkApi'
-    waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/images/VisionPropertiesApi'
-    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/ExifParser'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/VisionExplicitApi'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/VisionFacesApi'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/VisionLabelsApi'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/VisionLandmarkApi'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/images/VisionPropertiesApi'
+#    waitFor: ['-']
 
 
 #options:

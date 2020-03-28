@@ -9,6 +9,7 @@ require (
 	github.com/barsanuphe/goexiftool v0.0.0-20180509224600-0e25a2871ba9
 	github.com/google/uuid v1.1.1
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/pkg/errors v0.9.1
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/stretchr/testify v1.4.0
 	mikenimer.com/services/core/GcpUtils v1.0.0
