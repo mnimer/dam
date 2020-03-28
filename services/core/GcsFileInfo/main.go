@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 	"cloud.google.com/go/storage"
-	gcp "mikenimer.com/services/core/GcpUtils"
+	gcp "github.com/mnimer/dam/services/core/GcpUtils"
 )
 
 func main() {

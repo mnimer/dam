@@ -14,6 +14,11 @@ steps:
   # Build the module.
   #- name: golang
   #  args: ['go', 'test', '.']
+  - name: mirror.gcr.io/library/golang
+    env: ['GO111MODULE=on']
+    args: ['go', 'build', '.']
+#  - name: golang
+#    args: ['go', 'build', '.']
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['builds', 'submit', '--tag', 'gcr.io/${PROJECT_ID}/services-core-gcsfileinfo']
   - name: 'gcr.io/cloud-builders/gcloud'

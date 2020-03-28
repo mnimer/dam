@@ -1,4 +1,4 @@
-module mikenimer.com/services/core/GcpUtils
+module github.com/mnimer/dam/services/core/GcpUtils
 
 go 1.14
 

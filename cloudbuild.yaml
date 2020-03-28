@@ -9,20 +9,21 @@
 steps:
 #### Core
   - name: 'gcr.io/cloud-builders/gcloud'
+    id: "build GcsFileInfo"
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
     dir: 'services/core/GcsFileInfo'
     waitFor: ['-']
 
 
 #### Metadata
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/metadata/DataCatalogIndexer'
-    waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/metadata/BigQueryIndexer'
-    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/metadata/DataCatalogIndexer'
+#    waitFor: ['-']
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+#    dir: 'services/metadata/BigQueryIndexer'
+#    waitFor: ['-']
 
 #### Images
 #  - name: 'gcr.io/cloud-builders/gcloud'
