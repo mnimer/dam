@@ -12,20 +12,17 @@ steps:
     args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
     dir: 'services/core/GcsFileInfo'
     waitFor: ['-']
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-    dir: 'services/core/MetaDataFileWriter'
-    waitFor: ['-']
+
 
 #### Metadata
-#  - name: 'gcr.io/cloud-builders/gcloud'
-#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-#    dir: 'services/metadata/DataCatalogIndexer'
-#    waitFor: ['-']
-#  - name: 'gcr.io/cloud-builders/gcloud'
-#    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
-#    dir: 'services/metadata/BigQueryIndexer'
-#    waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/metadata/DataCatalogIndexer'
+    waitFor: ['-']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['builds', 'submit', '--config', 'cloudbuild.yaml']
+    dir: 'services/metadata/BigQueryIndexer'
+    waitFor: ['-']
 
 #### Images
 #  - name: 'gcr.io/cloud-builders/gcloud'
